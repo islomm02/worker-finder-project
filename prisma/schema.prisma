@@ -1,0 +1,240 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+
+model User{
+  id String @id @default(uuid())
+  fullName String
+  phone String @unique()
+  password String
+  role UserRole 
+  status Boolean @default(false)
+  region Region @relation(fields: [regionId], references: [id])
+  regionId String
+  createdAt DateTime @default(now())
+  companys AboutCompany[]
+}
+
+
+model AboutCompany{
+  id String @id @default(uuid())
+  users User @relation(fields: [userId], references: [id])
+  userId String
+  inn String
+  mfo String
+  pc String
+  bank String
+  Oked String
+  adress String
+}
+
+model Tools{
+  id String @id @default(uuid())
+  name_uz String
+  name_ru String
+  name_en String
+  description_uz String
+  description_ru String
+  description_en String
+  price Int
+  quantity Int
+  code String
+  brands Brand  @relation(fields: [brandId], references: [id])
+  brandId String
+  isActive Boolean @default(true)
+  capacity Capacity @relation(fields: [capacityId], references: [id])
+  capacityId String
+  sizes Size @relation(fields: [sizeId], references: [id])
+  sizeId String
+  image String
+  createdAt DateTime @default(now())
+  products Product[] @relation("ProductTools")
+  orders Order[] @relation("ProductTools")
+  masters Master[] @relation("MasterTools")
+
+} 
+
+
+model Product{
+  id String @id @default(uuid())
+  name_uz String
+  name_ru String
+  name_en String
+  image String
+  minWorkingHour Int
+  levels Level @relation(fields: [levelId], references: [id])
+  levelId String
+  price_hourly Int
+  price_daily Int
+  tools Tools[] @relation("ProductTools")
+  toolId String 
+  orders Order[]
+  masters Master[] @relation("MasterProducts")
+
+}
+
+
+model Order{
+  id String @id @default(uuid())
+  products Product @relation(fields: [productId], references: [id])
+  productId String
+  tools Tools[] @relation("ProductTools")
+  total Int
+  location String
+  address String
+  date DateTime
+  paymentType PaymentType
+  withDelivery Boolean @default(false)
+  status OrderStatus @default(PENDING)
+  commentToDelivery String
+  masters Master[] @relation("MasterOrders")
+}
+
+
+model Master{
+  id String @id @default(uuid())
+  fullName String
+  phone String
+  isActive Boolean @default(true)
+  year Int
+  products Product[] @relation("MasterProducts")
+  minWorkingHour Int
+  levels Level @relation(fields: [levelId], references: [id])
+  levelId String
+  price_hourly Int
+  price_daily Int
+  expirience String
+  tools Tools[] @relation("MasterTools")
+  image String
+  passportImage String
+  star Float
+  about String
+  orders Order[] @relation("MasterOrders")
+  comments Comment[] @relation("MasterComments")
+
+}
+
+
+
+model Showcase{
+  id String @id @default(uuid())
+  name_uz String
+  name_ru String
+  name_en String
+  description_uz String
+  description_ru String
+  description_en String
+  image String
+  link String
+}
+
+
+model GeneralInfo{
+  id String @id @default(uuid())
+  email String
+  links String
+  phones String
+}
+
+model Comment{
+  id String @id @default(uuid())
+  message String
+  masters Master[] @relation("MasterComments")
+}
+
+
+model FAQ{
+  id String @id @default(uuid())
+  question String
+  answer String
+}
+
+
+
+model Capacity{
+  id String @id @default(uuid())
+  name_uz String
+  name_ru String
+  name_en String
+  tools Tools[]
+}
+
+
+model Partners{
+  id String @id @default(uuid())
+  name_uz String
+  name_ru String
+  name_en String
+  image String
+}
+
+
+
+
+model Level{
+  id String @id @default(uuid())
+  name_uz String
+  name_ru String
+  name_en String
+  products Product[]
+  masters Master[]
+}
+
+
+
+model Brand{
+  id String @id @default(uuid())
+  name_uz String
+  name_ru String
+  name_en String
+  tools Tools[]
+}
+
+model Size{
+  id String @id @default(uuid())
+  name_uz String
+  name_ru String
+  name_en String
+  tools Tools[]
+}
+
+model Region{
+  id String @id @default(uuid())
+  name String
+  users User[]
+}
+
+
+enum OrderStatus{
+  PENDING
+  COMPLETED
+  PIAD
+  NOT_PAID
+  CANCELED
+}
+
+enum PaymentType{
+  NAQD
+  KARTA
+}
+
+enum UserRole{
+  ADMIN
+  SUPER_ADMIN
+  VIEWER_ADMIN
+  USER_FIZ
+  USER_YUR
+}
