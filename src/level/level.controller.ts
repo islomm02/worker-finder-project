@@ -1,17 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Inject, UseInterceptors } from '@nestjs/common';
 import { LevelService } from './level.service';
 import { CreateLevelDto } from './dto/create-level.dto';
 import { UpdateLevelDto } from './dto/update-level.dto';
+import { CACHE_MANAGER, CacheInterceptor } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Controller('level')
 export class LevelController {
-  constructor(private readonly levelService: LevelService) {}
+  constructor(
+    private readonly levelService: LevelService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   @Post()
   create(@Body() createLevelDto: CreateLevelDto) {
     return this.levelService.create(createLevelDto);
   }
 
+  @UseInterceptors(CacheInterceptor)
   @Get()
   findAll() {
     return this.levelService.findAll();

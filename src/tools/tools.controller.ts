@@ -19,16 +19,16 @@ export class ToolsController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.toolsService.findOne(+id);
+    return this.toolsService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateToolDto: UpdateToolDto) {
-    return this.toolsService.update(+id, updateToolDto);
+    return this.toolsService.update(id, updateToolDto);
   }
-
+    
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.toolsService.remove(+id);
+    return this.toolsService.remove(id);
   }
 }

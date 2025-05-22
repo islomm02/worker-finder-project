@@ -120,7 +120,7 @@ model Master{
   tools Tools[] @relation("MasterTools")
   image String
   passportImage String
-  star Float
+  star Float @default(0)
   about String
   orders Order[] @relation("MasterOrders")
   comments Comment[] @relation("MasterComments")

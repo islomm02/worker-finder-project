@@ -1,17 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Inject, UseInterceptors } from '@nestjs/common';
 import { SizeService } from './size.service';
 import { CreateSizeDto } from './dto/create-size.dto';
 import { UpdateSizeDto } from './dto/update-size.dto';
+import { CACHE_MANAGER, CacheInterceptor } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Controller('size')
 export class SizeController {
-  constructor(private readonly sizeService: SizeService) {}
+  constructor(
+    private readonly sizeService: SizeService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   @Post()
   create(@Body() createSizeDto: CreateSizeDto) {
     return this.sizeService.create(createSizeDto);
   }
 
+  @UseInterceptors(CacheInterceptor)
   @Get()
   findAll() {
     return this.sizeService.findAll();

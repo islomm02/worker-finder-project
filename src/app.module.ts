@@ -10,9 +10,14 @@ import { SizeModule } from './size/size.module';
 import { CapacityModule } from './capacity/capacity.module';
 import { ToolsModule } from './tools/tools.module';
 import { LevelModule } from './level/level.module';
+import { FaqModule } from './faq/faq.module';
+import { MulterModule } from './multer/multer.module';
+import { CacheModule } from '@nestjs/cache-manager';
+import { MastersModule } from './masters/masters.module';
 
 @Module({
   imports: [
+    CacheModule.register(),
     UserModule,
     PrismaModule,
     RegionModule,
@@ -25,6 +30,9 @@ import { LevelModule } from './level/level.module';
     CapacityModule,
     ToolsModule,
     LevelModule,
+    FaqModule,
+    MulterModule,
+    MastersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
