@@ -22,9 +22,28 @@ export class CapacityService {
     }
   }
 
-  async findAll() {
+  async findAll(options) {
     try {
-      let cps = await this.prisma.capacity.findMany()
+      let sort = options.sort || undefined;
+      let order = options.order || undefined;
+      let take = options.take || 10;
+      let from = options.from || 0;
+      let where: {} = {};
+      if (options.search) {
+        where = {
+          OR: [
+            { name_uz: { contains: options.search } },
+            { name_ru: { contains: options.search } },
+            { name_en: { contains: options.search } },
+          ],
+        };
+      }
+      let cps = await this.prisma.capacity.findMany({
+        where,
+        orderBy: { [sort]: order },
+        take: Number(take),
+        skip: Number(from),
+      });
       return cps;
     } catch (error) {
       console.log(error);

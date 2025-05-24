@@ -14,6 +14,14 @@ import { FaqModule } from './faq/faq.module';
 import { MulterModule } from './multer/multer.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { MastersModule } from './masters/masters.module';
+import { OrderModule } from './order/order.module';
+import { CommentModule } from './comment/comment.module';
+import { PartnersModule } from './partners/partners.module';
+import { TelegrambotService } from './telegrambot/telegrambot.service';
+import { TelegrambotModule } from './telegrambot/telegrambot.module';
+import { ProductModule } from './product/product.module';
+import { BasketModule } from './basket/basket.module';
+import { OrderItemModule } from './order-item/order-item.module';
 
 @Module({
   imports: [
@@ -33,8 +41,15 @@ import { MastersModule } from './masters/masters.module';
     FaqModule,
     MulterModule,
     MastersModule,
+    OrderModule,
+    CommentModule,
+    PartnersModule,
+    TelegrambotModule,
+    ProductModule,
+    BasketModule,
+    OrderItemModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, TelegrambotService],
 })
 export class AppModule {}

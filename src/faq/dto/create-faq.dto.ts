@@ -4,5 +4,5 @@ export class CreateFaqDto {
     @ApiProperty()
     question: string;
     @ApiProperty()
-    answer: string;
+    answers: string;
 }

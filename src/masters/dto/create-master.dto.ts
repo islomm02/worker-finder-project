@@ -25,5 +25,18 @@ export class CreateMasterDto {
     passportImage: string
     @ApiProperty()
     about: string
+    @ApiProperty({type: [Object],
+        example: [
+          {
+                productId: '03fd3d33-b170-4c15-8801-6b0b85cdbc49',
+                count: 2,
+          },
+          {
+                productId: '03fd3d33-b170-4c15-8801-6b0b85cdbc49',
+                count: 4,
+          },
+        ],
+    })
+    products: string[];
 }
 
