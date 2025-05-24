@@ -69,7 +69,7 @@ export class UserService {
       }
       let hash = bcrypt.hashSync(createUserDto.password, 10);
       user = await this.prisma.user.create({
-        data: { ...UserDetails, password: hash, role: UserRole.USER_YUR },
+        data: { ...UserDetails, password: hash, role: UserRole.USER_YUR, telegramUserName: createUserDto.telegramUserName },
       });
       await this.prisma.aboutCompany.create({
         data: { ...CompanyDetails, userId: user.id },
@@ -113,6 +113,22 @@ export class UserService {
         { expiresIn: '7d' },
       );
       return{ accessToken, refreshToken}
+    } catch (error) {
+      console.log(error);
+      return error.message
+    }
+  }
+
+
+  async me(id: string) { 
+    try {
+      let myProfile = await this.prisma.user.findFirst({
+        where: { id }, include: {
+          companys: true,
+          region: true,          
+        }
+      }) 
+      return myProfile
     } catch (error) {
       console.log(error);
       return error.message

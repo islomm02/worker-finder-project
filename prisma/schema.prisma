@@ -26,6 +26,9 @@ model User{
   regionId String
   createdAt DateTime @default(now())
   companys AboutCompany[]
+  telegramUserName String @default("")
+  telegramChatId String @default("")
+  orders Order[]
 }
 
 
@@ -62,8 +65,9 @@ model Tools{
   image String
   createdAt DateTime @default(now())
   products Product[] @relation("ProductTools")
-  orders Order[] @relation("ProductTools")
   masters Master[] @relation("MasterTools")
+  OrderItems OrderItem[]
+  BasketItems BasketItem[]
 
 } 
 
@@ -78,22 +82,24 @@ model Product{
   levels Level @relation(fields: [levelId], references: [id])
   levelId String
   price_hourly Int
+  count Int @default(0) 
   price_daily Int
   tools Tools[] @relation("ProductTools")
-  toolId String 
-  orders Order[]
+  orders Order[] @relation("OrderItems")
   masters Master[] @relation("MasterProducts")
+  OrderItems OrderItem[]
+  BasketItems BasketItem[]
 
 }
 
 
 model Order{
   id String @id @default(uuid())
-  products Product @relation(fields: [productId], references: [id])
-  productId String
-  tools Tools[] @relation("ProductTools")
+  products          Product[]    @relation("OrderItems")
+  users User @relation(fields: [userId], references: [id])
+  userId String
   total Int
-  location String
+  location Json 
   address String
   date DateTime
   paymentType PaymentType
@@ -101,7 +107,47 @@ model Order{
   status OrderStatus @default(PENDING)
   commentToDelivery String
   masters Master[] @relation("MasterOrders")
+  OrderItems OrderItem[]
+  BasketItems BasketItem[]
+  measure Measure @default(HOUR)
+  howMuch Int
 }
+
+model OrderItem {
+  id    String   @id @default(uuid())
+  order Order @relation(fields: [orderId], references: [id])
+
+  orderId String
+
+  product     Product @relation(fields: [productId], references: [id])
+  productId   String
+  prdQuantity Int
+
+  tool         Tools @relation(fields: [toolId], references: [id])
+  toolId       String
+  toolQuantity Int
+
+  CreatedAt DateTime @default(now())
+}
+
+
+model BasketItem {
+  id    String   @id @default(uuid())
+  order Order @relation(fields: [orderId], references: [id])
+
+  orderId String
+
+  product     Product @relation(fields: [productId], references: [id])
+  productId   String
+  prdQuantity Int
+
+  tool         Tools @relation(fields: [toolId], references: [id])
+  toolId       String
+  toolQuantity Int
+
+  CreatedAt DateTime @default(now())
+}
+
 
 
 model Master{
@@ -153,31 +199,42 @@ model Comment{
   id String @id @default(uuid())
   message String
   masters Master[] @relation("MasterComments")
+  masterId String
+  star Int
+}
+
+model Contacts{
+  id String @id @default(uuid())
+  name String
+  surName String
+  phone String
+  address String
+  message String
 }
 
 
 model FAQ{
   id String @id @default(uuid())
-  question String
-  answer String
+  question String 
+  answers String
 }
 
 
 
 model Capacity{
   id String @id @default(uuid())
-  name_uz String
-  name_ru String
-  name_en String
+  name_uz String @unique()
+  name_ru String @unique()
+  name_en String @unique()
   tools Tools[]
 }
 
 
 model Partners{
   id String @id @default(uuid())
-  name_uz String
-  name_ru String
-  name_en String
+  name_uz String @unique()
+  name_ru String @unique()
+  name_en String @unique()
   image String
 }
 
@@ -215,6 +272,11 @@ model Region{
   id String @id @default(uuid())
   name String
   users User[]
+}
+
+enum Measure{
+  HOUR
+  DAY
 }
 
 
