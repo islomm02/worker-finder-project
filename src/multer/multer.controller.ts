@@ -45,7 +45,7 @@ export class MulterController {
   })
   async uploadFile(@UploadedFile() file: Express.Multer.File) {
     return {
-      message: `http://localhost:3000/uploads/${file.filename}`,
+      message: `http://13.61.175.94/uploads/${file.filename}`,
     };
   }
 
