@@ -28,6 +28,14 @@ export class CreateUserFiz {
   @IsEmail()
   email: string;
 }
+
+export class ToAdminDto{
+  @ApiProperty()
+  id: string;
+}
+
+
+
 export class CreateUserYur {
   @ApiProperty()
   fullName: string;

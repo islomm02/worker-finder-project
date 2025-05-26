@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  ToAdminDto,
   CreateUserFiz,
   CreateUserYur,
   LoginUserDto,
@@ -151,7 +152,7 @@ export class UserService {
 
   async findAll() {
     try {
-      let users = await this.prisma.user.findMany();
+      let users = await this.prisma.user.findMany({});
       return users;
     } catch (error) {
       console.log(error);
@@ -224,6 +225,9 @@ export class UserService {
       let user = await this.prisma.user.findFirst({ where: { id } });
       if (!user) {
         throw new NotFoundException('User not found');
+      }
+      if (!user.email) {
+        throw new BadRequestException('User email not found');
       }
       this.mailer.send(
         user.email,

@@ -13,6 +13,7 @@ import {
 import { UserService } from './auth.service';
 import {
   CreateUserFiz,
+  ToAdminDto,
   CreateUserYur,
   LoginUserDto,
   ResetPasswordDto,
@@ -96,13 +97,13 @@ export class UserController {
   @UseGuards(RoleGuard)
   @UseGuards(TokenGuard)
   @Post('promote-to-admin')
-  toAdmin(@Req() req, @Body() data: VerifyUserDto) {
-    return this.userService.toAdmin(req['user'].id);
+  toAdmin(@Req() req, @Body() data: ToAdminDto) {
+    return this.userService.toAdmin(data.id);
   }
 
-  @RoleDecorator(UserRole.ADMIN)
-  @UseGuards(RoleGuard)
-  @UseGuards(TokenGuard)
+    @RoleDecorator(UserRole.ADMIN)
+   @UseGuards(RoleGuard)
+   @UseGuards(TokenGuard)
   @Patch()
   updateUser(@Req() req, @Body() data: any) {
     const userId = req.user.id;
