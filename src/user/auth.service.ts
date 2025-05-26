@@ -225,6 +225,9 @@ export class UserService {
       if (!user) {
         throw new NotFoundException('User not found');
       }
+      if (!user.email) {
+        throw new BadRequestException('User email not found');
+      }
       this.mailer.send(
         user.email,
         totp.generate(user.email),

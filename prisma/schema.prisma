@@ -28,7 +28,7 @@ model User{
   companys AboutCompany[]
   telegramUserName String @default("") @unique()
   telegramChatId String @default("")
-  email String
+  email String? @unique()
   isVerified Boolean @default(false)
   orders Order[]
 }
