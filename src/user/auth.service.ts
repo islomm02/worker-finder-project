@@ -16,7 +16,13 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { totp } from 'otplib';
 import { NodemailerService } from 'src/nodemailer/nodemailer.service';
+import { UpdateUserFiz } from './dto/update-user.dto';
 
+totp.options = {
+  digits: 6,
+  step: 300,
+  window: 1,
+}
 
 @Injectable()
 export class UserService {
@@ -59,6 +65,21 @@ export class UserService {
     }
   }
 
+  async sendOtp(email: string) { 
+    try {
+      let user = await this.prisma.user.findFirst({ where: { email } });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      const otp = totp.generate(email);
+      this.mailer.send(email, otp, 'Sizning OTP kodingiz', 'OTP Code');
+      return { message: 'OTP sent successfully' };
+    } catch (error) {
+      console.log(error);
+      return error.message;
+    }
+  }
+
   async verify(data: VerifyUserDto) {
     try {
       let match = totp.check(data.otp, data.email);
@@ -77,7 +98,8 @@ export class UserService {
       });
       return { message: 'User verified successfully', user };
     } catch (error) {
-      
+      console.log(error);
+      return error.message;
     }
   }
 
@@ -130,6 +152,26 @@ export class UserService {
   async findAll() {
     try {
       let users = await this.prisma.user.findMany();
+      return users;
+    } catch (error) {
+      console.log(error);
+      return error.message;
+    }
+  }
+
+  async toAdmin(id: string) {
+    try {
+      let users = await this.prisma.user.findFirst({ where: { id } });
+      if (!users) { 
+        throw new NotFoundException('User not found');
+      }
+      if (users.role === UserRole.ADMIN) {
+        throw new BadRequestException('User is already an admin');
+      }
+      users = await this.prisma.user.update({
+        where: { id },
+        data: { role: UserRole.ADMIN },
+      });
       return users;
     } catch (error) {
       console.log(error);
@@ -204,4 +246,26 @@ export class UserService {
       return error.message;
     }
   }
+
+  async updateUser(id: string, data: UpdateUserFiz) { 
+    try {
+      let user = await this.prisma.user.findFirst({ where: { id } });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      if (data.password) {
+        data.password = bcrypt.hashSync(data.password, 10);
+      }
+      user = await this.prisma.user.update({
+        where: { id },
+        data,
+      });
+      return user;
+    } catch (error) {
+      console.log(error);
+      return error.message;
+    }
+  }
+
+
 }

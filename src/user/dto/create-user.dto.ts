@@ -63,6 +63,12 @@ export class LoginUserDto {
   password: string;
 }
 
+export class SendOtpDto {
+  @ApiProperty()
+  @IsEmail()
+  email: string;
+}
+
 export class ResetPasswordDto {
   @ApiProperty()
   otp: string;
