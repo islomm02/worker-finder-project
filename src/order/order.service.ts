@@ -1,141 +1,274 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { CreateOrderDto } from './dto/create-order.dto';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import {  CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { TelegrambotService } from 'src/telegrambot/telegrambot.service';
-import { Measure } from '@prisma/client';
+import { Request } from 'express';
+import { BotUpdate } from 'src/bot/bot.update';
+import { BotService } from 'src/bot/bot.service';
 
 @Injectable()
 export class OrderService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private bot: BotService
+  ) {}
+  async order(data: CreateOrderDto, req: Request, userId: string ) {
+    try {
+      let { date, OrderTools, location, OrderProducts, ...rest } = data;
 
-  async create(createOrderDto: CreateOrderDto, userId: string) {
-    let total = 0;
-    const {
-      measure,
-      howMuch,
-      location,
-      address,
-      date,
-      paymentType,
-      withDelivery,
-      commentToDelivery,
-    } = createOrderDto;
+      let TOOL_TotalPrice = 0;
 
+      for (const { toolId, quantity } of OrderTools) {
+        const toolExists = await this.prisma.tools.findFirst({
+          where: { id: toolId },
+        });
 
-    for (const item of createOrderDto.OrderItems) {
-      let prds = await this.prisma.product.findFirst({
-        where: { id: (item as any).productId },
-      });
+        if (!toolExists) {
+          throw new BadRequestException(
+            `Tool with ID ${toolId} does not exist`,
+          );
+        }
 
-      let tools = await this.prisma.tools.findFirst({
-        where: { id: (item as any).toolId },
-      });
+        if (quantity > toolExists.quantity) {
+          throw new BadRequestException(
+            `Bu tool dan ${quantity}-ta yoq! Faqat ${toolExists.quantity}-ta qoldi!`,
+          );
+        }
 
-      if (prds?.count == 0) {
-        throw new BadRequestException("Product is ended");
+        await this.prisma.tools.update({
+          where: { id: toolExists.id },
+          data: { quantity: toolExists.quantity - quantity },
+        });
+
+        TOOL_TotalPrice += toolExists.price * quantity;
       }
 
-      if (prds?.count == undefined || prds.count < (item as any).prdQuantity) {
-        throw new BadRequestException("Product ocunt is not enough");
-      }
-      
-      
-      let newCount = prds.count - (item as any).prdQuantity;
-      await this.prisma.product.update({
-        where: { id: (item as any).productId },
-        data: { count: newCount },
+      const { productId, levelId, quantity } = data.OrderProducts[0];
+      const productExists = await this.prisma.product.findFirst({
+        where: { id: productId },
       });
-      
-      if (tools?.quantity == 0) {
-        throw new BadRequestException('Tool is ended');
+      if (!productExists) {
+        throw new BadRequestException(
+          `Product with ID ${productId} does not exist`,
+        );
       }
-
-      if (tools?.quantity == undefined || tools.quantity < (item as any).toolQuantity) {
-        throw new BadRequestException("Product ocunt is not enough");
-      }
-      
-      
-      let newCountTool = tools.quantity - (item as any).toolQuantity;
-      await this.prisma.tools.update({
-        where: { id: (item as any).toolId },
-        data: { quantity: newCountTool },
+      const levelExists = await this.prisma.level.findFirst({
+        where: { id: levelId },
       });
 
+      if (!levelExists) {
+        throw new BadRequestException(
+          `Level with ID ${levelId} does not exist`,
+        );
+      }
 
-      await this.prisma.orderItem.create({
+      const newOrder = await this.prisma.order.create({
         data: {
-          orderId: (item as any).orderId,
-          productId: (item as any).productId,
-          prdQuantity: (item as any).prdQuantity,
-          toolId: (item as any).toolId,
-          toolQuantity: (item as any).toolQuantity
+          ...rest,
+          total: TOOL_TotalPrice,
+          date,
+          products: {
+            connect: {
+              id: productId,
+            },
+          },
+          tools: {
+            connect: OrderTools.map((tool) => ({
+              id: tool.toolId,
+            })),
+          },
+          userId: req['user'].id,
+          location: location,
+        },
+        include: {
+          tools: true,
+          products: true,
+          users: true,
+          masters: true,
         },
       });
-      total += tools.price
+
+      let user = await this.prisma.user.findFirst({where: { id: userId }});
+
+      if (!user?.telegramChatId) {
+        throw new BadRequestException(
+          'User does not have a Telegram chat ID. Please send /start to bot @find_worker_bot_bot .',
+        );
+      }
+      if (user?.telegramChatId) {
+        await this.bot.sendMessageToUser(
+          user.telegramChatId,
+          `Buyurtma qabul qilindi! Buyurtma: ${newOrder}`,
+        );
+      }
+      
+
+      return {
+        message:
+          'Order muvaffaqiyatli yaratildi, endi sizga most workerlarni izlayapmiz',
+        TOOL_TotalPrice,
+        newOrder,
+      };
+    } catch (error) {
+      throw new BadRequestException(error.message);
     }
-    const order = await this.prisma.order.create({
-      data: {
-        location,
-        address,
-        date,
-        paymentType,
-        withDelivery,
-        commentToDelivery,
-        total: 12,
-        howMuch,
-        userId
-      },
-    });
   }
 
-  findAll() {
-    return `This action returns all order`;
+  async ConnectWorker(data) {
+    try {
+      let { mastersId, orderId } = data;
+      let totalCost = 0;
+
+      const existingOrder = await this.prisma.order.findFirst({
+        where: { id: orderId },
+      });
+
+      const user = await this.prisma.user.findFirst({
+        where: {
+          id: existingOrder?.userId ? String(existingOrder.userId) : '1',
+        },
+      });
+
+      if (!existingOrder) {
+        throw new BadRequestException(
+          `Order with ID ${orderId} does not exist`,
+        );
+      }
+
+      const orderDate = new Date(existingOrder.date);
+      const currentTime = new Date();
+
+      for (const masterId of mastersId) {
+        const master = await this.prisma.master.findFirst({
+          where: { id: masterId },
+        });
+
+        if (!master) {
+          throw new BadRequestException(
+            `Master with ID ${masterId} does not exist`,
+          );
+        }
+
+        const durationMs = orderDate.getTime() - currentTime.getTime();
+        if (durationMs <= 0) {
+          throw new BadRequestException(`Order time must be in the future`);
+        }
+
+        const totalHours = Math.floor(durationMs / (1000 * 60 * 60));
+        const fullDays = Math.floor(totalHours / 24);
+        const remainingHours = totalHours % 24;
+
+        totalCost +=
+          fullDays * master.price_daily + remainingHours * master.price_hourly;
+
+        const endDate = new Date(orderDate);
+
+        if (currentTime >= endDate) {
+          await this.prisma.master.update({
+            where: { id: masterId },
+            data: { isActive: false },
+          });
+        }
+      }
+
+      const updatedMasters = await this.prisma.master.updateMany({
+        where: { id: { in: mastersId } },
+        data: { isActive: false },
+      });
+
+      const newOrder = await this.prisma.order.update({
+        where: { id: orderId },
+        data: {
+          masters: {
+            connect: mastersId.map((id) => ({ id })),
+          },
+          total: totalCost,
+          date: orderDate,
+        },
+        include: {
+          tools: true,
+          products: true,
+          users: true,
+          masters: true,
+        },
+      });
+      return {
+        totalCost,
+        newOrder,
+        updatedMasters,
+      };
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
   }
-  
-  
+
+  async findAll() {
+    try {
+      let all = await this.prisma.order.findMany({
+        include: {
+          tools: true,
+          masters: true,
+        },
+      });
+      return all;
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
   async findAllMys(id: string) {
     try {
-      let mys = await this.prisma.order.findMany({ where: { userId: id } })
-      return mys
+      let all = await this.prisma.order.findMany({
+        where: { userId: id },
+        include: {
+          tools: true,
+          masters: true,
+        },
+      });
+      return all;
     } catch (error) {
-      console.log(error);
-      return error.message;
+      throw new BadRequestException(error.message);
     }
   }
 
   async findOne(id: string) {
     try {
-      let one = await this.prisma.order.findFirst({ where: { id } });
+      let one = await this.prisma.order.findFirst({
+        where: { id },
+        include: {
+          tools: true,
+          masters: true,
+        },
+      });
       if (!one) {
-        throw new NotFoundException('Order with this id not found')
+        throw new BadRequestException('Order not found');
       }
-      return one
+      return one;
     } catch (error) {
-      console.log(error);
-      return error.message;
+      throw new BadRequestException(error.message);
     }
   }
 
-  async update(id: string, data: UpdateOrderDto) {
+  async update(id: string, updateOrderDto: UpdateOrderDto) {
     try {
-      let one = await this.prisma.order.findFirst({ where: { id } });
-      if (!one) {
-        throw new NotFoundException('Order with this id not found');
-      }
-      const updateData = { ...data } as any;
-      if (updateData.measure && typeof updateData.measure === 'string') {
-        updateData.measure = Measure[updateData.measure as keyof typeof Measure];
-      }
-      let updated = await this.prisma.order.update({ where: { id }, data: updateData });
+      let updated = await this.prisma.order.update({
+        where: { id },
+        data: updateOrderDto,
+      });
       return updated;
-      } catch (error) {
-      console.log(error);
-      return error.message;
+    } catch (error) {
+      throw new BadRequestException(error.message);
     }
   }
 
-  remove(id: string) {
-    return `This action removes a #${id} order`;
+  async remove(id: string) {
+    try {
+      let deleted = await this.prisma.order.delete({
+        where: { id },
+      });
+      return deleted;
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
   }
 }

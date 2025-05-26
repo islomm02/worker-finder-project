@@ -25,7 +25,7 @@ export class OrderController {
   @Post()
   create(@Body() createOrderDto: CreateOrderDto, @Request() req) {
     let userId = req['user'].id;
-    return this.orderService.create(createOrderDto, userId);
+    return this.orderService.order(createOrderDto, req, userId);
   }
 
   @UseGuards(RoleGuard)

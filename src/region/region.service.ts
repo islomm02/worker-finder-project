@@ -1,11 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateRegionDto } from './dto/create-region.dto';
 import { UpdateRegionDto } from './dto/update-region.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { BotService } from 'src/bot/bot.service';
 
 @Injectable()
 export class RegionService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService,
+        private bot: BotService
+    
+  ) {}
 
   async create(data: CreateRegionDto) {
     try {
@@ -27,6 +31,7 @@ export class RegionService {
   }
 
   async findAll() {
+
     return await this.prisma.region.findMany();
   }
 

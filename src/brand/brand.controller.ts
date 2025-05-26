@@ -17,7 +17,6 @@ import { UpdateBrandDto } from './dto/update-brand.dto';
 import { CACHE_MANAGER, CacheInterceptor } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { ApiQuery } from '@nestjs/swagger';
-import { TelegrambotService } from 'src/telegrambot/telegrambot.service';
 import { TokenGuard } from 'src/guards/token.guard';
 import { RoleDecorator } from 'src/decorators/role-decorators';
 import { UserRole } from '@prisma/client';
@@ -29,7 +28,6 @@ export class BrandController {
   constructor(
     private readonly brandService: BrandService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-    private bot: TelegrambotService,
   ) {}
 
   @UseGuards(RoleGuard)
