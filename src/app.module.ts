@@ -17,11 +17,11 @@ import { MastersModule } from './masters/masters.module';
 import { OrderModule } from './order/order.module';
 import { CommentModule } from './comment/comment.module';
 import { PartnersModule } from './partners/partners.module';
-import { TelegrambotService } from './telegrambot/telegrambot.service';
-import { TelegrambotModule } from './telegrambot/telegrambot.module';
 import { ProductModule } from './product/product.module';
 import { BasketModule } from './basket/basket.module';
 import { OrderItemModule } from './order-item/order-item.module';
+import { NodemailerModule } from './nodemailer/nodemailer.module';
+import { BotModule } from './bot/bot.module';
 
 @Module({
   imports: [
@@ -44,12 +44,13 @@ import { OrderItemModule } from './order-item/order-item.module';
     OrderModule,
     CommentModule,
     PartnersModule,
-    TelegrambotModule,
     ProductModule,
     BasketModule,
     OrderItemModule,
+    NodemailerModule,
+    BotModule,
   ],
   controllers: [AppController],
-  providers: [AppService, TelegrambotService],
+  providers: [AppService],
 })
 export class AppModule {}

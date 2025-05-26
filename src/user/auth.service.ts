@@ -7,17 +7,23 @@ import {
   CreateUserFiz,
   CreateUserYur,
   LoginUserDto,
+  ResetPasswordDto,
+  VerifyUserDto,
 } from './dto/create-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { totp } from 'otplib';
+import { NodemailerService } from 'src/nodemailer/nodemailer.service';
+
 
 @Injectable()
 export class UserService {
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
+    private mailer: NodemailerService,
   ) {}
 
   async registerFiz(dataInput: CreateUserFiz) {
@@ -31,6 +37,8 @@ export class UserService {
         throw new BadRequestException('User with this phone already exists');
       }
       let hash = bcrypt.hashSync(dataInput.password, 10);
+
+
       user = await this.prisma.user.create({
         data: {
           ...dataInput,
@@ -38,10 +46,38 @@ export class UserService {
           password: hash,
         },
       });
+      try {
+        this.mailer.send(dataInput.email, totp.generate(dataInput.email), "Xisobingizni tasdiqlash uchun kodingiz", "Verify your account",);
+      } catch (error) {
+        console.log(error);
+        return error.message;
+      }
       return user;
     } catch (error) {
       console.log(error);
       return error.message;
+    }
+  }
+
+  async verify(data: VerifyUserDto) {
+    try {
+      let match = totp.check(data.otp, data.email);
+      if (!match) {
+        throw new BadRequestException('Invalid OTP code');
+      }
+      let user = await this.prisma.user.findFirst({
+        where: { email: data.email },
+      });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      user = await this.prisma.user.update({
+        where: { id: user.id },
+        data: { isVerified: true },
+      });
+      return { message: 'User verified successfully', user };
+    } catch (error) {
+      
     }
   }
 
@@ -52,6 +88,7 @@ export class UserService {
         phone: createUserDto.phone,
         password: createUserDto.password,
         regionId: createUserDto.regionId,
+        email: createUserDto.email,
       };
       const CompanyDetails = {
         inn: createUserDto.inn,
@@ -69,7 +106,12 @@ export class UserService {
       }
       let hash = bcrypt.hashSync(createUserDto.password, 10);
       user = await this.prisma.user.create({
-        data: { ...UserDetails, password: hash, role: UserRole.USER_YUR, telegramUserName: createUserDto.telegramUserName },
+        data: {
+          ...UserDetails,
+          password: hash,
+          role: UserRole.USER_YUR,
+          telegramUserName: createUserDto.telegramUserName,
+        },
       });
       await this.prisma.aboutCompany.create({
         data: { ...CompanyDetails, userId: user.id },
@@ -112,26 +154,54 @@ export class UserService {
         { id: user.id, role: user.role },
         { expiresIn: '7d' },
       );
-      return{ accessToken, refreshToken}
+      return { accessToken, refreshToken };
     } catch (error) {
       console.log(error);
-      return error.message
+      return error.message;
     }
   }
 
-
-  async me(id: string) { 
+  async me(id: string) {
     try {
       let myProfile = await this.prisma.user.findFirst({
-        where: { id }, include: {
+        where: { id },
+        include: {
           companys: true,
-          region: true,          
-        }
-      }) 
-      return myProfile
+          region: true,
+        },
+      });
+      return myProfile;
     } catch (error) {
       console.log(error);
-      return error.message
+      return error.message;
+    }
+  }
+
+  async resetPass(id: string, data: ResetPasswordDto) {
+    try {
+      let user = await this.prisma.user.findFirst({ where: { id } });
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      this.mailer.send(
+        user.email,
+        totp.generate(user.email),
+        'Sizning parolni tiklash uchun kodingiz',
+        'Reset password',
+      );
+      let match = totp.check(data.otp, user.email);
+      if (!match) {
+        throw new BadRequestException('Invalid OTP code');
+      }
+      let hash = bcrypt.hashSync(data.newpassword, 10);
+      await this.prisma.user.update({
+        where: { id },
+        data: { password: hash },
+      });
+      return { message: 'Password reset successfully' };
+    } catch (error) {
+      console.log(error);
+      return error.message;
     }
   }
 }

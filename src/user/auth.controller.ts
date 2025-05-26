@@ -14,12 +14,15 @@ import {
   CreateUserFiz,
   CreateUserYur,
   LoginUserDto,
+  ResetPasswordDto,
+  VerifyUserDto,
 } from './dto/create-user.dto';
 import { CACHE_MANAGER, CacheInterceptor } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { ApiQuery } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { TokenGuard } from 'src/guards/token.guard';
+import { Verify } from 'node:crypto';
 
 @Controller('auth')
 export class UserController {
@@ -68,5 +71,17 @@ export class UserController {
   me(@Req() req) {
     const userId = req.user.id;
     return this.userService.me(userId);
+  }
+
+  @UseGuards(TokenGuard)
+  @Post('reset-password')
+  resetPass(@Req() req, @Body() data: ResetPasswordDto) {
+    const userId = req.user.id;
+    return this.userService.resetPass(userId, data);
+  }
+
+  @Post('verify')
+  verify(@Req() req, @Body() data: VerifyUserDto) {
+    return this.userService.verify(data);
   }
 }
